@@ -1,8 +1,8 @@
-// src/game.ts
 import { boardLayout } from './boardLayout';
 import { Player } from './player';
 import {  Direction, GameMode, PlayerColor, SquareType } from './types';
 import type { BoardSquare, DiceResult, GameSettings, IPlayer } from './types';
+import { playSound } from './soundManager';
 
 // Configuration for player colors and their home bases
 const PLAYER_CONFIG = {
@@ -100,24 +100,27 @@ export class Game {
         const didLevelUp = movementPath.includes(player.homeBaseIndex) && oldPosition !== player.homeBaseIndex;
         if (didLevelUp) {
             token.level++;
+            playSound('levelUp', 0.6)
             console.log(`LEVEL UP! ${player.name}'s token ${token.id} is now level ${token.level}!`);
         }
 
         token.positionIndex = newPosition;
         console.log(`${player.name} moves token ${token.id} from square ${oldPosition} to ${newPosition}.`);
 
-        // First, handle collisions and check if a kill took place.
+        // 1. First, handle collisions. This will add any kill bonuses.
         const aKillHappened = this.handleCollisions(player, tokenIdToMove, newPosition);
-
-        // If a kill happened, the bonus is already awarded. The turn ends.
+        
+        // 2. Second, resolve the square's primary event (base score, wicket, etc.) This happens ALWAYS.
+        const landingSquare = this.board[newPosition];
+        const getsAnotherTurn = this.resolveSquareEvent(player, token.id, landingSquare);
+        
+        // 3. Finally, determine the turn flow. A kill overrides an extra turn.
         if (aKillHappened) {
+            // If a kill happened, the turn always ends.
             player.decrementTurn();
             this.advanceToNextPlayer();
         } else {
-            // If no kill, resolve the square event normally.
-            const landingSquare = this.board[newPosition];
-            const getsAnotherTurn = this.resolveSquareEvent(player, token.id, landingSquare);
-            
+            // If no kill, check if the square granted an extra turn.
             if (getsAnotherTurn) {
                 console.log(`EXTRA! ${player.name} gets to roll again.`);
             } else {
@@ -128,7 +131,7 @@ export class Game {
 
         this.checkGameOver();
     }
-    
+        
     public getMovementPath(startPosition: number, diceResult: DiceResult): number[] {
         const path: number[] = [];
         let currentPosition = startPosition;
@@ -140,6 +143,43 @@ export class Game {
         }
         return path;
     }
+
+    public getReturnPath(startPosition: number, homeBaseIndex: number): number[] {
+        const path: number[] = [];
+        let currentPosition = startPosition;
+
+        // If anti-clockwise movement is disallowed by settings, the return path MUST be anti-clockwise (a "rewind").
+        if (!this.settings.allowAntiClockwise) {
+            const antiClockwiseDistance = (startPosition - homeBaseIndex + BOARD_SIZE) % BOARD_SIZE;
+            const step = -1;
+            for (let i = 0; i < antiClockwiseDistance; i++) {
+                currentPosition = (currentPosition + step + BOARD_SIZE) % BOARD_SIZE;
+                path.push(currentPosition);
+            }
+        } else {
+            // Otherwise, if both directions are allowed, choose the shortest path back.
+            const clockwiseDistance = (homeBaseIndex - startPosition + BOARD_SIZE) % BOARD_SIZE;
+            const antiClockwiseDistance = (startPosition - homeBaseIndex + BOARD_SIZE) % BOARD_SIZE;
+
+            if (clockwiseDistance <= antiClockwiseDistance) {
+                // Go clockwise
+                const step = 1;
+                for (let i = 0; i < clockwiseDistance; i++) {
+                    currentPosition = (currentPosition + step + BOARD_SIZE) % BOARD_SIZE;
+                    path.push(currentPosition);
+                }
+            } else {
+                // Go anti-clockwise
+                const step = -1;
+                for (let i = 0; i < antiClockwiseDistance; i++) {
+                    currentPosition = (currentPosition + step + BOARD_SIZE) % BOARD_SIZE;
+                    path.push(currentPosition);
+                }
+            }
+        }
+        return path;
+    }
+
 
     /**
      * Checks if the moved token landed on an opponent's token.
@@ -175,6 +215,7 @@ export class Game {
 
                     // Victim Penalty
                     console.log(`COLLISION! ${attacker.name} knocked out ${victim.name}'s token ${victimToken .id}!`);
+                    playSound('collision', 0.8)
                     victim.takeWicket();
                     victim.returnTokenToHome(victimToken .id);
 
@@ -185,9 +226,9 @@ export class Game {
 
                     // Attacker Bonus is awarded for EACH kill
                     if (landingSquare.type === SquareType.Runs) {
-                        const bonusPoints = landingSquare.value * 2;
+                        const bonusPoints = landingSquare.value; // Bonus is just the square's value.
                         attacker.addScore(bonusPoints);
-                        console.log(`${attacker.name} gets ${bonusPoints} bonus points for the kill!`);
+                        console.log(`${attacker.name} gets a bonus of ${bonusPoints} runs for the kill!`);
                     }
                 }
             });
@@ -213,16 +254,19 @@ export class Game {
             case SquareType.Runs:
                 const runsScored = square.value * tokenLevel;
                 player.addScore(runsScored);
+                if (square.value > 3) playSound('score');
                 break;
             case SquareType.Wicket:
                 // Wicket logic is unaffected by level
                 player.takeWicket();
+                playSound('wicket', 0.7);
                 player.returnTokenToHome(tokenId);
                 break;
             case SquareType.Extra:
                 // Award points equal to the token's level.
                 const extraRuns = tokenLevel;
                 player.addScore(extraRuns);
+                if (extraRuns > 0) playSound('extra');
                 return true;
             case SquareType.DotBall:
             case SquareType.SafeZone:
@@ -236,20 +280,53 @@ export class Game {
         return this.players[this.currentPlayerIndex];
     }
 
-    private advanceToNextPlayer(): void {
+    /**
+     * Advances the game to the next player. Made public to allow UI to skip turns.
+     */
+    public advanceToNextPlayer(): void {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
     }
     
     private checkGameOver(): void {
+        // --- Condition 1: The "Hard Stop" ---
+        // The game definitively ends if all players are finished (all out or out of turns).
+        // This is the final state regardless of scores.
         if (this.gameMode === GameMode.Test) {
-            // Test mode ends when all players are all out
-            this.isGameOver = this.players.every(p => p.isAllOut);
+            if (this.players.every(p => p.isAllOut)) {
+                this.isGameOver = true;
+                return; // Exit early, game is over.
+            }
         } else {
-            // Limited overs modes end when all players have 0 turns left
-            this.isGameOver = this.players.every(p => p.turnsRemaining === 0 || p.isAllOut);
+            if (this.players.every(p => p.turnsRemaining === 0 || p.isAllOut)) {
+                this.isGameOver = true;
+                return; // Exit early, game is over.
+            }
+        }
+
+        // --- Condition 2: The "Chase" or "Early Victory" ---
+        // This condition applies if there's exactly one player left who is not all out.
+        const allOutPlayers = this.players.filter(p => p.isAllOut);
+
+        if (allOutPlayers.length === this.players.length - 1) {
+            const lastPlayer = this.players.find(p => !p.isAllOut);
+            
+            // This should always find a player, but it's a safe check.
+            if (!lastPlayer) return;
+
+            // Find the highest score among the defeated players. This is the target to beat.
+            const topScoreToBeat = Math.max(0, ...allOutPlayers.map(p => p.score));
+
+            // If the last player's current score has already surpassed the target, they win immediately.
+            if (lastPlayer.score > topScoreToBeat) {
+                console.log(`GAME OVER: ${lastPlayer.name} has surpassed the top score of ${topScoreToBeat}!`);
+                this.isGameOver = true;
+            }
+            // If their score is not higher, the game is NOT over yet.
+            // They must continue playing until they either beat the score, get all out, or run out of turns.
+            // The "Hard Stop" condition above will catch those final states.
         }
     }
-    
+        
     public printGameSummary(): void {
         console.log("\n--- GAME OVER ---");
         

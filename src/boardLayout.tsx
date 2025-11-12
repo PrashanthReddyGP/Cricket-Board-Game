@@ -1,10 +1,9 @@
-// src/boardLayout.ts
-import { SquareType } from './types';
+import { SquareType, PlayerColor } from './types';
 import type { BoardSquare } from './types';
 
 // The finalized 48-block board layout
 export const boardLayout: Readonly<BoardSquare[]> = [
-    { index: 0, coords: { row: 2, col: 4 }, type: SquareType.SafeZone, value: 0 },
+    { index: 0, coords: { row: 2, col: 4 }, type: SquareType.SafeZone, value: 0, ownerColor: PlayerColor.Blue },
     { index: 1, coords: { row: 2, col: 3 }, type: SquareType.Runs, value: 1 },
     { index: 2, coords: { row: 1, col: 3 }, type: SquareType.Wicket, value: 0 },
     { index: 3, coords: { row: 0, col: 3 }, type: SquareType.Runs, value: 2 },
@@ -16,7 +15,7 @@ export const boardLayout: Readonly<BoardSquare[]> = [
     { index: 9, coords: { row: 3, col: 0 }, type: SquareType.Extra, value: 0 },
     { index: 10, coords: { row: 3, col: 1 }, type: SquareType.Runs, value: 3 },
     { index: 11, coords: { row: 3, col: 2 }, type: SquareType.DotBall, value: 0 },
-    { index: 12, coords: { row: 4, col: 2 }, type: SquareType.SafeZone, value: 0 },
+    { index: 12, coords: { row: 4, col: 2 }, type: SquareType.SafeZone, value: 0, ownerColor: PlayerColor.Yellow },
     { index: 13, coords: { row: 5, col: 2 }, type: SquareType.Runs, value: 1 },
     { index: 14, coords: { row: 5, col: 1 }, type: SquareType.Wicket, value: 0 },
     { index: 15, coords: { row: 5, col: 0 }, type: SquareType.Runs, value: 2 },
@@ -28,7 +27,7 @@ export const boardLayout: Readonly<BoardSquare[]> = [
     { index: 21, coords: { row: 8, col: 3 }, type: SquareType.Extra, value: 0 },
     { index: 22, coords: { row: 7, col: 3 }, type: SquareType.Runs, value: 3 },
     { index: 23, coords: { row: 6, col: 3 }, type: SquareType.DotBall, value: 0 },
-    { index: 24, coords: { row: 6, col: 4 }, type: SquareType.SafeZone, value: 0 },
+    { index: 24, coords: { row: 6, col: 4 }, type: SquareType.SafeZone, value: 0, ownerColor: PlayerColor.Green },
     { index: 25, coords: { row: 6, col: 5 }, type: SquareType.Runs, value: 1 },
     { index: 26, coords: { row: 7, col: 5 }, type: SquareType.Wicket, value: 0 },
     { index: 27, coords: { row: 8, col: 5 }, type: SquareType.Runs, value: 2 },
@@ -40,7 +39,7 @@ export const boardLayout: Readonly<BoardSquare[]> = [
     { index: 33, coords: { row: 5, col: 8 }, type: SquareType.Extra, value: 0 },
     { index: 34, coords: { row: 5, col: 7 }, type: SquareType.Runs, value: 3 },
     { index: 35, coords: { row: 5, col: 6 }, type: SquareType.DotBall, value: 0 },
-    { index: 36, coords: { row: 4, col: 6 }, type: SquareType.SafeZone, value: 0 },
+    { index: 36, coords: { row: 4, col: 6 }, type: SquareType.SafeZone, value: 0, ownerColor: PlayerColor.Purple },
     { index: 37, coords: { row: 3, col: 6 }, type: SquareType.Runs, value: 1 },
     { index: 38, coords: { row: 3, col: 7 }, type: SquareType.Wicket, value: 0 },
     { index: 39, coords: { row: 3, col: 8 }, type: SquareType.Runs, value: 2 },

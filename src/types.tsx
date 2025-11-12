@@ -1,5 +1,3 @@
-// src/types.ts
-
 export enum Direction {
     Clockwise = "Green",
     AntiClockwise = "Red",
@@ -31,6 +29,7 @@ export interface BoardSquare {
     readonly coords: { row: number; col: number };
     readonly type: SquareType;
     readonly value: number; // For runs, 0 otherwise
+    readonly ownerColor?: PlayerColor;
 }
 
 export interface PlayerToken {

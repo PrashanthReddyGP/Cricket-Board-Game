@@ -1,4 +1,3 @@
-// src/player.ts
 import { PlayerColor } from './types';
 import type { IPlayer, PlayerToken } from './types';
 

@@ -3,18 +3,19 @@
   /* --board-bg: #212121; */
   --square-bg: #2d2d2d;
   --square-border: #444;
+  --square-border: #444;
   --background-color: #1a1a1a;
   --text-color: #f0f0f0;
   --text-muted: #aaa;
 
   --blue: #377dff;
   --yellow: #ffc107;
-  --green: #2bcded; /* <-- UPDATED: Green player is now aqua */
+  --green: #2bcded;
   --purple: #9d37ff;
   --red: #dc3545;
   --orange: #fd7e14;
   --cyan: #0dcaf0;
-  --action-green: #198754; /* <-- ADDED: A new color for the dice button */
+  --action-green: #198754;
 }
 
 body {
@@ -225,7 +226,7 @@ body {
   height: 100vh;
 }
 
-h5 {
+h1 {
   font-size: 3rem;
   font-weight: 700;
   color: var(--cyan);
@@ -246,6 +247,26 @@ h5 {
   position: relative;
 }
 
+/* === SQUARE TYPE STYLES (CORRECTED) === */
+
+/* General rule for ALL safe zones using the CORRECT selector */
+.square.playable[class*="safezone-"] {
+  outline-width: 2px;
+  outline-style: solid;
+}
+
+/* Specific rules that now correctly apply ONLY the color */
+.playable.safezone-blue { outline-color: var(--blue); }
+.playable.safezone-yellow { outline-color: var(--yellow); }
+.playable.safezone-green { outline-color: var(--green); } /* This is aqua */
+.playable.safezone-purple { outline-color: var(--purple); }
+
+/* Background colors for other square types */
+.playable.wicket { background-color: var(--red); }
+.playable.extra { background-color: var(--orange); }
+.playable.runs { background-color: var(--cyan); }
+.playable.dotball { background-color: #6c757d; }
+
 .square.playable {
   background-color: var(--square-bg);
   border: 1px solid var(--square-border);
@@ -264,7 +285,7 @@ h5 {
   transition: all 0.3s ease-in-out; 
 }
 
-/* --- NEW: Periodic Table effect for occupied squares --- */
+/* --- Periodic Table effect for occupied squares --- */
 .square.occupied .square-content {
   top: 5px;       /* Move to the top */
   left: 7px;      /* Move to the left */
@@ -273,17 +294,23 @@ h5 {
   color: rgba(255, 255, 255, 0.6); /* Make it slightly more visible */
 }
 
+/* === BUG FIX: ADAPTIVE TOKEN CONTAINER (FLEXBOX VERSION) === */
 .token-container {
   z-index: 2;
   display: flex;
-  gap: 4px;
-  align-items: center; /* Center vertically */
+  flex-wrap: wrap; /* Allows tokens to wrap to the next line */
   justify-content: center; /* Center horizontally */
-  transition: transform 0.3s ease-in-out; /* Add this line */
+  align-items: center; /* Center vertically for a single line */
+  align-content: center; /* Center vertically for multiple lines */
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 4px; /* Give a little space from the edges */
+  box-sizing: border-box;
 }
 
 .token {
-  width: 26px;
+  width: 26px; /* Default size for 1 or 2 tokens */
   height: 26px;
   border-radius: 50%;
   color: white;
@@ -294,14 +321,30 @@ h5 {
   font-size: 0.8rem;
   border: 2px solid rgba(0, 0, 0, 0.5);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s ease-in-out;
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0; /* Prevent tokens from shrinking weirdly */
+}
+
+/* For 3 tokens, make them slightly smaller to fit better */
+.token-container .token:nth-child(1):nth-last-child(3),
+.token-container .token:nth-child(2):nth-last-child(2),
+.token-container .token:nth-child(3):nth-last-child(1) {
+  width: 24px;
+  height: 24px;
+}
+
+/* For 4+ tokens, make them smaller so they can wrap into a 2x2 grid */
+.token-container .token:nth-child(n+4),
+.token-container .token:nth-child(n+4) ~ .token {
+  width: 22px;
+  height: 22px;
+  font-size: 0.7rem;
 }
 
 .token.blue { background-color: var(--blue); }
 .token.yellow { background-color: var(--yellow); color: #212121; }
 .token.green { background-color: var(--green); }
 .token.purple { background-color: var(--purple); }
-
 
 /* === ADD THIS KEYFRAMES ANIMATION AT THE TOP OR BOTTOM OF THE FILE === */
 @keyframes pulse {
@@ -332,11 +375,22 @@ h5 {
   justify-content: center;
   text-align: center;
   transition: all 0.3s ease;
-  box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); /* Initial state for transition */
+  box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+  border: 2px solid transparent; /* Base border for smooth transition */
 }
+
+/* Default border colors for scoreboards */
+.quadrant-scoreboard.tl { border-color: var(--blue); }
+.quadrant-scoreboard.tr { border-color: var(--purple); }
+.quadrant-scoreboard.bl { border-color: var(--yellow); }
+.quadrant-scoreboard.br { border-color: var(--green); }
+
 .quadrant-scoreboard.current-player {
   color: white; /* Default text color for active state */
+  border-width: 0px; /* Hide border when background is filled */
+  padding: 13px; /* Add back padding to maintain size */
 }
+
 /* Set the specific background color for each player when active */
 .quadrant-scoreboard.current-player.tl { background-color: var(--blue); }
 .quadrant-scoreboard.current-player.tr { background-color: var(--purple); }
@@ -436,7 +490,13 @@ h5 {
   justify-content: center;
   align-items: center;
   /* This is the magic! Smoothly transition top and left properties */
-  transition: top 0.15s ease-in-out, left 0.15s ease-in-out;
+  transition: top 0.1s ease-in-out, left 0.1s ease-in-out;
+}
+
+.animating-token-wrapper.is-returning .token {
+  opacity: 0.6;
+  transform: scale(0.8);
+  filter: grayscale(50%);
 }
 
 .quadrant-scoreboard.is-ai .player-id::after {
@@ -449,4 +509,138 @@ h5 {
   border-radius: 4px;
   margin-left: 8px;
   vertical-align: middle;
+}
+
+/* === DICE STYLES === */
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0.8; }
+  70% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes roll {
+  0% { transform: rotate(0deg) scale(0.9); }
+  100% { transform: rotate(360deg) scale(0.9); }
+}
+
+.dice-face {
+  width: 90px;
+  height: 90px;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+  
+  display: grid;
+  grid-template-areas:
+    "a . c"
+    "e g f"
+    "d . b";
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+.dice-face.final-result {
+  animation: pop 0.3s ease-out;
+}
+.dice-face.rolling {
+  animation: roll 0.5s infinite linear;
+}
+
+.pip {
+  width: 18px;
+  height: 18px;
+  background-color: #111;
+  border-radius: 50%;
+  align-self: center;
+  justify-self: center;
+}
+/* Use the color prop for the final result */
+.final-result .pip {
+  background-color: currentColor;
+}
+
+/* Position pips using grid-area based on number */
+.dice-face[style*="color"] .pip { background-color: currentColor; }
+
+/* Patterns for each number */
+.dice-face:is([data-number="1"]) .pip:nth-child(1) { grid-area: g; }
+
+.dice-face:is([data-number="2"]) .pip:nth-child(1) { grid-area: a; }
+.dice-face:is([data-number="2"]) .pip:nth-child(2) { grid-area: b; }
+
+.dice-face:is([data-number="3"]) .pip:nth-child(1) { grid-area: a; }
+.dice-face:is([data-number="3"]) .pip:nth-child(2) { grid-area: g; }
+.dice-face:is([data-number="3"]) .pip:nth-child(3) { grid-area: b; }
+
+.dice-face:is([data-number="4"]) .pip:nth-child(1) { grid-area: a; }
+.dice-face:is([data-number="4"]) .pip:nth-child(2) { grid-area: b; }
+.dice-face:is([data-number="4"]) .pip:nth-child(3) { grid-area: c; }
+.dice-face:is([data-number="4"]) .pip:nth-child(4) { grid-area: d; }
+
+.dice-face:is([data-number="5"]) .pip:nth-child(1) { grid-area: a; }
+.dice-face:is([data-number="5"]) .pip:nth-child(2) { grid-area: b; }
+.dice-face:is([data-number="5"]) .pip:nth-child(3) { grid-area: c; }
+.dice-face:is([data-number="5"]) .pip:nth-child(4) { grid-area: d; }
+.dice-face:is([data-number="5"]) .pip:nth-child(5) { grid-area: g; }
+
+.dice-face:is([data-number="6"]) .pip:nth-child(1) { grid-area: a; }
+.dice-face:is([data-number="6"]) .pip:nth-child(2) { grid-area: b; }
+.dice-face:is([data-number="6"]) .pip:nth-child(3) { grid-area: c; }
+.dice-face:is([data-number="6"]) .pip:nth-child(4) { grid-area: d; }
+.dice-face:is([data-number="6"]) .pip:nth-child(5) { grid-area: e; }
+.dice-face:is([data-number="6"]) .pip:nth-child(6) { grid-area: f; }
+
+.clickable-die {
+  cursor: pointer;
+  transition: transform 0.2s ease-out;
+}
+.clickable-die:hover {
+  transform: scale(1.1) rotate(10deg);
+}
+
+.dice-face.idle {
+  background-color: var(--action-green);
+  opacity: 0.9;
+}
+.dice-face.idle .pip {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.ai-thinking {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    opacity: 0.5;
+}
+
+/* --- Home Icon Styles --- */
+.square-content.home-icon {
+  /* Reset properties from the text-based content */
+  font-size: initial;
+  font-weight: initial;
+  
+  /* Center the SVG container */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.home-icon svg {
+  width: 50%;
+  height: 50%;
+  opacity: 0.75; /* Make it a subtle background element */
+  transition: all 0.3s ease-in-out;
+}
+
+/* Apply player colors to the icon */
+.home-icon.blue { color: var(--blue); }
+.home-icon.yellow { color: var(--yellow); }
+.home-icon.green { color: var(--green); } /* This will be aqua */
+.home-icon.purple { color: var(--purple); }
+
+/* When a token is on top, shrink the icon slightly instead of moving it */
+.square.occupied .home-icon svg {
+  transform: scale(0.8);
+  opacity: 0.1;
 }
