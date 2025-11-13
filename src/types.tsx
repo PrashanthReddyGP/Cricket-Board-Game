@@ -1,28 +1,34 @@
-export enum Direction {
-    Clockwise = "Green",
-    AntiClockwise = "Red",
-}
+export const Direction = {
+    Clockwise: "Green",
+    AntiClockwise: "Red",
+} as const;
 
-export enum SquareType {
-    SafeZone = "SafeZone",
-    Runs = "Runs",
-    DotBall = "DotBall",
-    Wicket = "Wicket",
-    Extra = "Extra",
-}
+export type Direction = typeof Direction[keyof typeof Direction];
 
-export enum PlayerColor {
-    Blue = "Blue",
-    Yellow = "Yellow",
-    Green = "Green",
-    Purple = "Purple",
-}
+export const SquareType = {
+    SafeZone: "SafeZone",
+    Runs: "Runs",
+    DotBall: "DotBall",
+    Wicket: "Wicket",
+    Extra: "Extra",
+} as const;
 
-export enum GameMode {
-    T20 = "T20",
-    FiftyFifty = "50-50",
-    Test = "Test",
-}
+export type SquareType = typeof SquareType[keyof typeof SquareType];
+
+export const PlayerColor = {
+    Blue: "Blue",
+    Yellow: "Yellow",
+    Green: "Green",
+    Purple: "Purple",
+} as const;
+
+export type PlayerColor = typeof PlayerColor[keyof typeof PlayerColor];
+
+export const GameMode = {
+    T20: "T20",
+    FiftyFifty: "50-50",
+    Test: "Test",
+} as const;
 
 export interface BoardSquare {
     readonly index: number;

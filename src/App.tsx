@@ -24,7 +24,7 @@ type GameType = 'human-vs-ai' | 'multiplayer';
 //================================================================================
 function App() {
   const [gameState, setGameState] = useState<GameState>('home');
-  const [gameType, setGameType] = useState<GameType>('human-vs-ai');
+  const gameType: GameType = 'human-vs-ai';
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.T20);
   const [gameId, setGameId] = useState(1);
   const { settings } = useSettings(); // Get settings from context
@@ -160,7 +160,7 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
         setTimeout(() => {
           setIsDiceRolling(false);
           setDiceResult(aiDiceResult);
-          const chosenTokenId = gameInstance.makeAIDecision(currentPlayer, aiDiceResult);
+          const chosenTokenId = gameInstance.makeAIDecision(currentPlayer);
           
           setTimeout(() => {
             handleTokenMove(chosenTokenId, aiDiceResult);
@@ -256,7 +256,7 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
     
     setWaitingForTokenChoice(false);
     
-    setAnimatingToken({ playerColor: player.color, tokenId, path, currentStep: 0, phase: 'lifting', startPosition: token.positionIndex, level: token.level });
+    setAnimatingToken({ playerColor: player.color, tokenId: tokenId as 1 | 2, path, currentStep: 0, phase: 'lifting', startPosition: token.positionIndex, level: token.level });
     
     setTimeout(() => {
       path.forEach((_, index) => {

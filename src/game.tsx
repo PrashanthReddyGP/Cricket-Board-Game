@@ -12,7 +12,7 @@ const PLAYER_CONFIG = {
     [PlayerColor.Purple]: { name: "Player 4 (Purple)", homeBaseIndex: 36 },
 };
 
-const MAX_WICKETS = 10;
+// const MAX_WICKETS = 10;
 const BOARD_SIZE = 48;
 
 export class Game {
@@ -345,7 +345,7 @@ export class Game {
         }
     }
 
-    public makeAIDecision(player: IPlayer, diceResult: DiceResult): 1 | 2 {
+    public makeAIDecision(player: IPlayer): 1 | 2 {
         console.log(`[AI] ${player.name} is thinking...`);
         // For now, our AI is very simple: it chooses a token randomly.
         // This is the perfect place to add more complex logic later!
