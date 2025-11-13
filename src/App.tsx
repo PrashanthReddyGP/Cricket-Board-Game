@@ -448,8 +448,8 @@ const AnimatingToken = ({ token, isReturning = false }: { token: AnimatingToken;
   }
 
   const style = {
-    top: `calc(${coords.row * (70 + 6) + 12}px)`,
-    left: `calc(${coords.col * (70 + 6) + 12}px)`,
+    top: `calc( (var(--gap-size) * 2) + ${coords.row} * (var(--square-size) + var(--gap-size)) )`,
+    left: `calc( (var(--gap-size) * 2) + ${coords.col} * (var(--square-size) + var(--gap-size)) )`,
   };
 
   return (
