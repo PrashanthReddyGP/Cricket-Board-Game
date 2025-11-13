@@ -4,25 +4,17 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './AuthContext';
 import { Game } from './game';
-import type { DiceResult, IPlayer, AnimatingToken as AnimatingTokenData, PlayerToken } from './types';
+import type { DiceResult, AnimatingToken as AnimatingTokenData } from './types';
 import { playSound } from './soundManager';
-import { boardLayout } from './boardLayout';
 
 import {
-  Board,
-  AnimatingToken,
-  Square,
-  ControlHub,
-  QuadrantScore,
-  Dice,
-  SquareContent,
+  Board
 } from './App';
 
 // Animation Constants
 const LIFT_DURATION = 200;
 const MOVE_DURATION = 180;
 const LAND_DURATION = 300;
-const MOVE_BACK_DURATION = 100;
 
 
 type MultiplayerGameScreenProps = {
@@ -41,7 +33,7 @@ export const MultiplayerGameScreen = ({ gameId, onGameEnd }: MultiplayerGameScre
     const [waitingForTokenChoice, setWaitingForTokenChoice] = useState(false);
     const [animatingToken, setAnimatingToken] = useState<AnimatingTokenData | null>(null);
     const [isDiceRolling, setIsDiceRolling] = useState(false);
-    const [returningTokens, setReturningTokens] = useState<AnimatingTokenData[]>([]);
+    const [returningTokens, _setReturningTokens] = useState<AnimatingTokenData[]>([]);
 
     const previousGameRef = useRef<Game | null>(null);
 

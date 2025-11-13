@@ -1,6 +1,6 @@
 // src/LobbyScreen.tsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { supabase } from './supabaseClient';
 import { useAuth } from './AuthContext';
 import { useSettings } from './SettingsContext'; // Import useSettings
@@ -34,7 +34,6 @@ export const LobbyScreen = ({ onGameStart }: LobbyScreenProps) => {
             
             // Define the players for this new game.
             // For now, we'll hardcode 2 players.
-            const playerColors = [PlayerColor.Blue, PlayerColor.Yellow]; 
             const playerInfo = [
                 { userId: user.id, id: 1, name: `Player 1 (Blue)`, color: PlayerColor.Blue },
                 // We will add Player 2 when they join
