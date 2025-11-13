@@ -53,4 +53,42 @@ export class Player implements IPlayer {
             this.turnsRemaining--;
         }
     }
+
+    // ========================================================================
+    // NEW SERIALIZATION METHODS
+    // ========================================================================
+
+    /**
+     * Converts the Player instance into a plain JSON object.
+     */
+    public toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            color: this.color,
+            homeBaseIndex: this.homeBaseIndex,
+            isAI: this.isAI,
+            score: this.score,
+            wickets: this.wickets,
+            turnsRemaining: this.turnsRemaining,
+            tokens: this.tokens,
+            isAllOut: this.isAllOut,
+        };
+    }
+
+    /**
+     * Creates a Player instance from a plain JSON object.
+     */
+    public static fromJSON(data: any): Player {
+        // Create a new player instance using the constructor for essential properties
+        const player = new Player(data.id, data.name, data.color, data.homeBaseIndex, data.turnsRemaining, data.isAI);
+        
+        // Manually assign the stateful properties
+        player.score = data.score;
+        player.wickets = data.wickets;
+        player.tokens = data.tokens;
+        player.isAllOut = data.isAllOut;
+
+        return player;
+    }
 }

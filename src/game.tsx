@@ -26,7 +26,10 @@ export class Game {
     constructor(mode: GameMode, playerColors: PlayerColor[], settings: GameSettings, humanPlayerColor?: PlayerColor) {
         this.gameMode = mode;
         this.settings = settings;
-        this.initializePlayers(playerColors, humanPlayerColor);
+        // Only initialize players if playerColors are provided. This is for the fromJSON method.
+        if (playerColors.length > 0) {
+            this.initializePlayers(playerColors, humanPlayerColor);
+        }
     }
 
     /**
@@ -353,5 +356,37 @@ export class Game {
         const choice: 1 | 2 = Math.random() < 0.5 ? 1 : 2;
         console.log(`[AI] ${player.name} has decided to move token ${choice}.`);
         return choice;
+    }
+
+    // ========================================================================
+    // NEW SERIALIZATION METHODS
+    // ========================================================================
+
+    /**
+     * Converts the entire Game instance into a plain JSON object.
+     */
+    public toJSON() {
+        return {
+            players: this.players.map(p => p.toJSON()), // Use the new method on each player
+            currentPlayerIndex: this.currentPlayerIndex,
+            isGameOver: this.isGameOver,
+            gameMode: this.gameMode,
+            settings: this.settings,
+        };
+    }
+
+    /**
+     * Creates a Game instance from a plain JSON object.
+     */
+    public static fromJSON(data: any): Game {
+        // Create a new game instance without initializing players
+        const game = new Game(data.gameMode, [], data.settings);
+        
+        // Re-hydrate the state from the JSON data
+        game.players = data.players.map((playerData: any) => Player.fromJSON(playerData));
+        game.currentPlayerIndex = data.currentPlayerIndex;
+        game.isGameOver = data.isGameOver;
+
+        return game;
     }
 }

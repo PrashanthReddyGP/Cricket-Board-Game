@@ -1,11 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react'; // Import useRef
 import { Game } from './game';
 import { GameMode, PlayerColor, SquareType, Direction } from './types';
-import type { DiceResult, PlayerToken, IPlayer, AnimatingToken, GameSettings, BoardSquare } from './types';
+import type { DiceResult, PlayerToken, IPlayer, AnimatingToken as AnimatingTokenData, GameSettings, BoardSquare } from './types';
 import './App.css';
 import { boardLayout } from './boardLayout';
 import { useSettings } from './SettingsContext';
 import { playSound } from './soundManager';
+import { LobbyScreen } from './LobbyScreen';
+import { MultiplayerGameScreen } from './MultiplayerGameScreen';
 
 const AI_THINKING_TIME = 1000; // 1 second delay for AI moves
 
@@ -16,7 +18,7 @@ const LAND_DURATION = 300;
 const MOVE_BACK_DURATION = 100;
 
 // Type for our simple router
-type GameState = 'home' | 'settings' | 'playing' | 'end';
+type GameState = 'home' | 'settings' | 'lobby' | 'playing' | 'end';
 type GameType = 'human-vs-ai' | 'multiplayer';
 
 //================================================================================
@@ -35,6 +37,15 @@ function App() {
   const goHome = () => { setGameId(id => id + 1); setGameState('home'); };
   const showSettings = () => { setGameState('settings'); };
 
+  // Store the current multiplayer game ID
+  const [multiplayerGameId, setMultiplayerGameId] = useState<string | null>(null);
+
+  const showLobby = () => setGameState('lobby');
+  const startMultiplayerGame = (gameId: string) => {
+      setMultiplayerGameId(gameId);
+      setGameState('playing');
+  }
+
   // The game instance is now part of the GameScreen
   const gameInstance = useMemo(() => {
     const humanPlayer = gameType === 'human-vs-ai' ? PlayerColor.Blue : undefined;
@@ -44,9 +55,14 @@ function App() {
   return (
     <div className="app-container">
       <h1>Cricket Board Game</h1>
-      {gameState === 'home' && <HomeScreen onStartGame={startGame} onShowSettings={showSettings} />}
+      {gameState === 'home' && <HomeScreen onStartGame={startGame} onShowSettings={showSettings} onShowLobby={showLobby} />}
+      {gameState === 'lobby' && <LobbyScreen onGameStart={startMultiplayerGame} />}
       {gameState === 'settings' && <SettingsScreen onGoHome={goHome} />}
-      {gameState === 'playing' && <GameScreen key={gameId} gameInstance={gameInstance} onGameEnd={endGame} />}
+      {gameState === 'playing' && (
+          multiplayerGameId 
+          ? <MultiplayerGameScreen gameId={multiplayerGameId} onGameEnd={endGame} />
+          : <GameScreen key={gameId} gameInstance={gameInstance} onGameEnd={endGame} />
+      )}
       {gameState === 'end' && <EndScreen gameInstance={gameInstance} onRestart={restartGame} onGoHome={goHome} />}
     </div>
   );
@@ -55,8 +71,16 @@ function App() {
 //================================================================================
 // HOME SCREEN COMPONENT
 //================================================================================
-const HomeScreen = ({ onStartGame, onShowSettings }: { onStartGame: (mode: GameMode, type: GameType) => void; onShowSettings: () => void; }) => (
+const HomeScreen = ({ onStartGame, onShowSettings, onShowLobby }: { 
+  onStartGame: (mode: GameMode, type: GameType) => void; 
+  onShowSettings: () => void;
+  onShowLobby: () => void;
+}) => (
   <div className="screen home-screen">
+    <h2>Multiplayer</h2>
+    <div className="mode-selection">
+        <button onClick={() => { playSound('click'); onShowLobby(); }}>Lobby</button>
+    </div>
     <h2>Single Player (vs AI)</h2>
     <div className="mode-selection">
       <button onClick={() => { playSound('click'); onStartGame(GameMode.T20, 'human-vs-ai'); }}>T20</button>
@@ -120,9 +144,9 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
   const [gameVersion, setGameVersion] = useState(0);
   const [diceResult, setDiceResult] = useState<DiceResult | null>(null);
   const [waitingForTokenChoice, setWaitingForTokenChoice] = useState(false);
-  const [animatingToken, setAnimatingToken] = useState<AnimatingToken | null>(null);
+  const [animatingToken, setAnimatingToken] = useState<AnimatingTokenData | null>(null);
   const [isDiceRolling, setIsDiceRolling] = useState(false);
-  const [returningTokens, setReturningTokens] = useState<AnimatingToken[]>([]);
+  const [returningTokens, setReturningTokens] = useState<AnimatingTokenData[]>([]);
 
   const currentPlayer = gameInstance.getCurrentPlayer();
   const isAnimating = !!animatingToken || returningTokens.length > 0;
@@ -189,7 +213,7 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
         // Run the turn logic, which updates all game state (scores, wickets, positions, isAllOut status)
         gameInstance.playTurn(tokenId, finalDiceResult);
 
-        const returnAnims: AnimatingToken[] = [];
+        const returnAnims: AnimatingTokenData[] = [];
         const actualVictims = potentialVictims.filter(victim => {
           const tokenAfterTurn = victim.player.tokens.find(t => t.id === victim.id)!;
           return tokenAfterTurn.positionIndex === victim.player.homeBaseIndex;
@@ -220,7 +244,7 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
   }, [animatingToken?.phase]);
 
   // --- ADVANCE GAME STATE *AFTER* RETURN ANIMATIONS FINISH ---
-  const prevReturningTokensRef = useRef<AnimatingToken[]>([]);
+  const prevReturningTokensRef = useRef<AnimatingTokenData[]>([]);
   useEffect(() => {
     // Check if the previous state had tokens and the current one is empty.
     // This means the return animations have just finished.
@@ -275,7 +299,7 @@ const GameScreen = ({ gameInstance, onGameEnd }: { gameInstance: Game; onGameEnd
     }, LIFT_DURATION);
   };
   
-  const handleReturnAnimations = (returnAnims: AnimatingToken[]) => {
+  const handleReturnAnimations = (returnAnims: AnimatingTokenData[]) => {
     setReturningTokens(prev => [...prev, ...returnAnims]);
 
     returnAnims.forEach(tokenToAnimate => {
@@ -347,7 +371,7 @@ const EndScreen = ({ gameInstance, onRestart, onGoHome }: { gameInstance: Game; 
 //================================================================================
 // DICE COMPONENT
 //================================================================================
-const Dice = ({ number, color, isRolling, isIdle }: { number: number; color?: string; isRolling?: boolean; isIdle?: boolean }) => {
+export const Dice = ({ number, color, isRolling, isIdle }: { number: number; color?: string; isRolling?: boolean; isIdle?: boolean }) => {
   return (
     <div 
       className={`dice-face ${isRolling ? 'rolling' : ''} ${isIdle ? 'idle' : ''} ${!isRolling && !isIdle ? 'final-result' : ''}`} 
@@ -369,14 +393,14 @@ type BoardProps = {
   isGameOver: boolean;
   waitingForTokenChoice: boolean;
   onTokenMove: (tokenId: number) => void;
-  animatingToken: AnimatingToken | null;
-  returningTokens: AnimatingToken[];
+  animatingToken: AnimatingTokenData | null;
+  returningTokens: AnimatingTokenData[];
   onRollDice: () => void;
   isDiceRolling: boolean;
   diceResult: DiceResult | null;
 };
 
-const Board = ({ tokens, players, currentPlayer, animatingToken, returningTokens, onRollDice, onTokenMove, waitingForTokenChoice, isGameOver, isDiceRolling, diceResult }: BoardProps) => {
+export const Board = ({ tokens, players, currentPlayer, animatingToken, returningTokens, onRollDice, onTokenMove, waitingForTokenChoice, isGameOver, isDiceRolling, diceResult }: BoardProps) => {
   // Filter out the primary moving token
   let staticTokens = animatingToken 
     ? tokens.filter(t => !(t.color === animatingToken.playerColor && t.id === animatingToken.tokenId))
@@ -430,7 +454,7 @@ const Board = ({ tokens, players, currentPlayer, animatingToken, returningTokens
 };
 
 // This component renders the moving token
-const AnimatingToken = ({ token, isReturning = false }: { token: AnimatingToken; isReturning?: boolean }) => {
+export const AnimatingToken = ({ token, isReturning = false }: { token: AnimatingTokenData; isReturning?: boolean }) => {
   let posIndex;
   
   if (token.phase === 'lifting') {
@@ -469,7 +493,7 @@ type SquareProps = {
   isAnimating: boolean;
 };
 
-const Square = ({ squareInfo, tokens, isWaitingForChoice, currentPlayerColor, onTokenMove, isAnimating }: SquareProps) => {
+export const Square = ({ squareInfo, tokens, isWaitingForChoice, currentPlayerColor, onTokenMove, isAnimating }: SquareProps) => {
   const tokensOnSquare = tokens.filter(t => t.positionIndex === squareInfo.index);
   const hasTokens = tokensOnSquare.length > 0;
   const gridStyle = { gridColumn: squareInfo.coords.col + 1, gridRow: squareInfo.coords.row + 1 };
@@ -502,7 +526,7 @@ const Square = ({ squareInfo, tokens, isWaitingForChoice, currentPlayerColor, on
   );
 };
 
-const ControlHub = ({ isGameOver, waitingForTokenChoice, diceResult, onRollDice, currentPlayer, isDiceRolling }: any) => {
+export const ControlHub = ({ isGameOver, waitingForTokenChoice, diceResult, onRollDice, currentPlayer, isDiceRolling }: any) => {
     const diceColorVar = diceResult?.direction === Direction.Clockwise ? 'var(--action-green)' : `var(--red)`;
     
     // Show a randomly cycling die face during the rolling animation
@@ -549,7 +573,7 @@ const ControlHub = ({ isGameOver, waitingForTokenChoice, diceResult, onRollDice,
     );
 };
 
-const QuadrantScore = ({ player, isCurrent, position }: { player: IPlayer; isCurrent: boolean; position: string }) => (
+export const QuadrantScore = ({ player, isCurrent, position }: { player: IPlayer; isCurrent: boolean; position: string }) => (
   <div className={`quadrant-scoreboard ${position} ${isCurrent ? 'current-player' : ''} ${player.isAI ? 'is-ai' : ''} ${player.isAllOut ? 'all-out' : ''}`}>
     {/* <div className="player-id" style={{ color: `var(--${player.color.toLowerCase()})`}}>{player.id}</div> */}
     <div className="player-score">{player.score}-{player.wickets}</div>
@@ -557,7 +581,7 @@ const QuadrantScore = ({ player, isCurrent, position }: { player: IPlayer; isCur
   </div>
 );
 
-const SquareContent = ({ type, value, ownerColor }: { type: SquareType; value: number; ownerColor?: PlayerColor }) => {
+export const SquareContent = ({ type, value, ownerColor }: { type: SquareType; value: number; ownerColor?: PlayerColor }) => {
   // If it's a safe zone, render the Home Icon SVG
   if (type === SquareType.SafeZone && ownerColor) {
     const colorClass = ownerColor.toLowerCase();

@@ -193,34 +193,37 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-content: center; 
   align-items: center;
-  align-content: center;
-  gap: 2px;
+  gap: 3px; /* A small gap between tokens */
   width: 100%;
   height: 100%;
-  padding: 4px;
+  padding: 2px;
   box-sizing: border-box;
 }
 
 .token {
-  width: calc(var(--square-size) * 0.4);   /* Responsive size */
-  height: calc(var(--square-size) * 0.4);  /* Responsive size */
+  flex-grow: 0;
+  flex-shrink: 1;
+  flex-basis: 45%;
+  aspect-ratio: 1 / 1;
+  max-width: calc(var(--square-size) * 0.5);
   border-radius: 50%;
   color: white;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: calc(var(--square-size) * 0.2); /* Responsive font */
+  font-size: calc(var(--square-size) * 0.18); /* Responsive font */
   border: 2px solid rgba(0, 0, 0, 0.5);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   transition: all 0.2s ease-in-out;
-  flex-shrink: 0;
 }
 .token.blue { background-color: var(--blue); }
 .token.yellow { background-color: var(--yellow); color: #212121; }
 .token.green { background-color: var(--green); }
 .token.purple { background-color: var(--purple); }
+.token.selectable { cursor: pointer; animation: pulse 1.5s infinite; z-index: 20; }
 
 /* Animation (Unchanged) */
 @keyframes pulse {
@@ -271,7 +274,7 @@ h1 {
   align-items: center;
   transition: opacity 0.3s ease;
 }
-.token.selectable { cursor: pointer; animation: pulse 1.5s infinite; z-index: 20; }
+
 .animating-token-wrapper {
   position: absolute;
   z-index: 50;
