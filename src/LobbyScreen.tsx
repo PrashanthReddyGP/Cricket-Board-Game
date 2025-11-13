@@ -96,31 +96,20 @@ export const LobbyScreen = ({ onGameStart }: LobbyScreenProps) => {
         setError('');
 
         try {
-            const { data: game, error: fetchError } = await supabase
-                .from('games')
-                .select('*')
-                .eq('game_code', gameCode.toUpperCase())
-                .single();
+            // Call our secure Edge Function instead of updating from the client
+            const { data, error } = await supabase.functions.invoke('join-game', {
+                body: { gameCode: gameCode.toUpperCase() }
+            });
 
-            if (fetchError || !game) throw new Error('Game not found or already started.');
+            if (error) throw new Error(error.message); // Handles network errors
+            if (data.error) throw new Error(data.error); // Handles errors from inside the function
 
-            // TODO: Add logic to prevent joining a full game and to assign a unique color.
-            const newPlayer = { userId: user.id, name: `Player ${user.id.substring(0, 4)}`, color: 'Yellow' };
-            const updatedPlayers = [...game.players, newPlayer];
-
-            const { data, error: updateError } = await supabase
-                .from('games')
-                .update({ players: updatedPlayers })
-                .eq('id', game.id)
-                .select()
-                .single();
-            
-            if (updateError) throw updateError;
-            
-            onGameStart(data.id);
+            // The function returns the gameId on success
+            onGameStart(data.gameId);
 
         } catch (err: any) {
             setError(err.message);
+            console.error(err);
         } finally {
             setLoading(false);
         }
