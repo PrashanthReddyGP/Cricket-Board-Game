@@ -40,6 +40,7 @@ export class Game {
             const config = PLAYER_CONFIG[color];
             if (config) {
                 // A player is an AI if a human player is defined AND it's not them.
+                // If humanPlayerColor is undefined, isAI will ALWAYS be false.
                 const isAI = !!humanPlayerColor && color !== humanPlayerColor;
                 this.players.push(
                     new Player(index + 1, config.name, color, config.homeBaseIndex, initialTurns, isAI)
@@ -102,7 +103,6 @@ export class Game {
         const didLevelUp = movementPath.includes(player.homeBaseIndex) && oldPosition !== player.homeBaseIndex;
         if (didLevelUp) {
             token.level++;
-            playSound('levelUp', 0.6)
             console.log(`LEVEL UP! ${player.name}'s token ${token.id} is now level ${token.level}!`);
         }
 
@@ -217,7 +217,6 @@ export class Game {
 
                     // Victim Penalty
                     console.log(`COLLISION! ${attacker.name} knocked out ${victim.name}'s token ${victimToken .id}!`);
-                    playSound('collision', 0.8)
                     victim.takeWicket();
                     victim.returnTokenToHome(victimToken .id);
 
@@ -256,19 +255,16 @@ export class Game {
             case SquareType.Runs:
                 const runsScored = square.value * tokenLevel;
                 player.addScore(runsScored);
-                if (square.value > 3) playSound('score');
                 break;
             case SquareType.Wicket:
                 // Wicket logic is unaffected by level
                 player.takeWicket();
-                playSound('wicket', 0.7);
                 player.returnTokenToHome(tokenId);
                 break;
             case SquareType.Extra:
                 // Award points equal to the token's level.
                 const extraRuns = tokenLevel;
                 player.addScore(extraRuns);
-                if (extraRuns > 0) playSound('extra');
                 return true;
             case SquareType.DotBall:
             case SquareType.SafeZone:

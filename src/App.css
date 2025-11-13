@@ -408,3 +408,23 @@ h1 {
     text-orientation: mixed;
   }
 }
+
+.mode-selection button.active {
+  background-color: var(--cyan);
+  color: #111;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.mode-selection.expanded {
+  background-color: rgba(0, 0, 0, 0);
+  padding: 1rem;
+  margin-top: -0.5rem; /* Pull it closer to the button above */
+  margin-bottom: 1rem;
+  border-radius: 0 0 12px 12px;
+}
+
+.mode-selection.expanded button {
+  background-color: var(--action-green);
+  font-size: 1rem;
+}

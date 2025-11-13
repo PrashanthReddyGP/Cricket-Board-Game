@@ -19,19 +19,32 @@ const MOVE_BACK_DURATION = 100;
 
 // Type for our simple router
 type GameState = 'home' | 'settings' | 'lobby' | 'playing' | 'end';
-type GameType = 'human-vs-ai' | 'multiplayer';
+type GameType = 'human-vs-ai' | 'pass-and-play' | 'multiplayer';
 
 //================================================================================
 // MAIN APP COMPONENT (ACTS AS A ROUTER)
 //================================================================================
 function App() {
   const [gameState, setGameState] = useState<GameState>('home');
-  const gameType: GameType = 'human-vs-ai';
+  const [gameType, setGameType] = useState<GameType>('human-vs-ai');
   const [gameMode, setGameMode] = useState<GameMode>(GameMode.T20);
   const [gameId, setGameId] = useState(1);
   const { settings } = useSettings(); // Get settings from context
+  const [passAndPlayPlayers, setPassAndPlayPlayers] = useState<PlayerColor[]>([]);
 
-  const startGame = (mode: GameMode) => { setGameMode(mode); setGameState('playing'); };
+  const startSinglePlayerGame = (mode: GameMode) => {
+    setGameMode(mode);
+    setGameType('human-vs-ai');
+    setGameState('playing');
+  };
+
+  const startPassAndPlayGame = (mode: GameMode, players: PlayerColor[]) => {
+    setGameMode(mode);
+    setGameType('pass-and-play');
+    setPassAndPlayPlayers(players);
+    setGameState('playing');
+  };
+
   const endGame = () => { setGameState('end'); };
   const restartGame = () => { setGameId(id => id + 1); setGameState('playing'); };
   const goHome = () => { setGameId(id => id + 1); setGameState('home'); };
@@ -43,27 +56,51 @@ function App() {
   const showLobby = () => setGameState('lobby');
   const startMultiplayerGame = (gameId: string) => {
       setMultiplayerGameId(gameId);
+      setGameType('multiplayer'); // Set game type for multiplayer
       setGameState('playing');
   }
 
   // The game instance is now part of the GameScreen
+  // The single gameInstance now handles all offline modes
   const gameInstance = useMemo(() => {
-    const humanPlayer = gameType === 'human-vs-ai' ? PlayerColor.Blue : undefined;
-    return new Game(gameMode, [PlayerColor.Blue, PlayerColor.Yellow, PlayerColor.Green, PlayerColor.Purple], settings, humanPlayer);
-  }, [gameId, gameMode, settings, gameType]);
+    if (gameType === 'human-vs-ai') {
+      const playerColors = [PlayerColor.Blue, PlayerColor.Yellow, PlayerColor.Green, PlayerColor.Purple];
+      return new Game(gameMode, playerColors, settings, PlayerColor.Blue); // Blue is human
+    }
+    if (gameType === 'pass-and-play') {
+      // All players are human, so the last argument is undefined
+      return new Game(gameMode, passAndPlayPlayers, settings);
+    }
+    return null; // For multiplayer, the game instance is managed by MultiplayerGameScreen
+  }, [gameId, gameMode, settings, gameType, passAndPlayPlayers]);
 
   return (
     <div className="app-container">
       <h1>Cricket Board Game</h1>
-      {gameState === 'home' && <HomeScreen onStartGame={startGame} onShowSettings={showSettings} onShowLobby={showLobby} />}
+      {gameState === 'home' && (
+        <HomeScreen
+          onStartSinglePlayer={startSinglePlayerGame}
+          onStartPassAndPlay={startPassAndPlayGame}
+          onShowSettings={showSettings}
+          onShowLobby={showLobby}
+        />
+      )}
       {gameState === 'lobby' && <LobbyScreen onGameStart={startMultiplayerGame} />}
       {gameState === 'settings' && <SettingsScreen onGoHome={goHome} />}
       {gameState === 'playing' && (
-          multiplayerGameId 
-          ? <MultiplayerGameScreen gameId={multiplayerGameId} onGameEnd={endGame} />
-          : <GameScreen key={gameId} gameInstance={gameInstance} onGameEnd={endGame} />
+        gameType === 'multiplayer' && multiplayerGameId ? (
+          <MultiplayerGameScreen gameId={multiplayerGameId} onGameEnd={endGame} />
+        ) : gameInstance ? (
+          <GameScreen key={gameId} gameInstance={gameInstance} onGameEnd={endGame} />
+        ) : (
+          <div>Error: Game not initialized.</div>
+        )
       )}
-      {gameState === 'end' && <EndScreen gameInstance={gameInstance} onRestart={restartGame} onGoHome={goHome} />}
+      {/* For EndScreen, we need to handle getting the instance from multiplayer too */}
+      {/* This is a simplification for now. */}
+      {gameState === 'end' && gameInstance && (
+        <EndScreen gameInstance={gameInstance} onRestart={restartGame} onGoHome={goHome} />
+      )}
     </div>
   );
 }
@@ -71,28 +108,84 @@ function App() {
 //================================================================================
 // HOME SCREEN COMPONENT
 //================================================================================
-const HomeScreen = ({ onStartGame, onShowSettings, onShowLobby }: { 
-  onStartGame: (mode: GameMode, type: GameType) => void; 
+const HomeScreen = ({
+  onStartSinglePlayer,
+  onStartPassAndPlay,
+  onShowSettings,
+  onShowLobby,
+}: {
+  onStartSinglePlayer: (mode: GameMode) => void;
+  onStartPassAndPlay: (mode: GameMode, players: PlayerColor[]) => void;
   onShowSettings: () => void;
   onShowLobby: () => void;
-}) => (
-  <div className="screen home-screen">
-    <h2>Multiplayer</h2>
-    <div className="mode-selection">
-        <button onClick={() => { playSound('click'); onShowLobby(); }}>Lobby</button>
+}) => {
+  const [selectedPlayerCount, setSelectedPlayerCount] = useState<number | null>(null);
+  const [selectedGameType, setSelectedGameType] = useState<'single' | 'pass-n-play' | null>(null);
+
+  const handleTypeSelect = (type: 'single' | 'pass-n-play', playerCount?: number) => {
+      playSound('click');
+      // Logic to toggle the selection
+      if (type === 'single' && selectedGameType === 'single') {
+          setSelectedGameType(null);
+      } else if (type === 'pass-n-play' && selectedPlayerCount === playerCount) {
+          setSelectedGameType(null);
+          setSelectedPlayerCount(null);
+      } else {
+          setSelectedGameType(type);
+          setSelectedPlayerCount(playerCount || null);
+      }
+  };
+
+  const handleModeSelect = (mode: GameMode) => {
+      playSound('click');
+      if (selectedGameType === 'single') {
+          onStartSinglePlayer(mode);
+      } else if (selectedGameType === 'pass-n-play' && selectedPlayerCount) {
+          let players: PlayerColor[] = [];
+          if (selectedPlayerCount === 2) players = [PlayerColor.Blue, PlayerColor.Green];
+          else if (selectedPlayerCount === 3) players = [PlayerColor.Blue, PlayerColor.Yellow, PlayerColor.Green];
+          else if (selectedPlayerCount === 4) players = [PlayerColor.Blue, PlayerColor.Yellow, PlayerColor.Green, PlayerColor.Purple];
+          onStartPassAndPlay(mode, players);
+      }
+  };
+  
+  // A small component to render the mode buttons to avoid repetition
+  const ModeButtons = () => (
+    <div className="mode-selection expanded">
+        <button onClick={() => handleModeSelect(GameMode.T20)}>T20</button>
+        <button onClick={() => handleModeSelect(GameMode.FiftyFifty)}>50-50</button>
+        <button onClick={() => handleModeSelect(GameMode.Test)}>Test Match</button>
     </div>
-    <h2>Single Player (vs AI)</h2>
-    <div className="mode-selection">
-      <button onClick={() => { playSound('click'); onStartGame(GameMode.T20, 'human-vs-ai'); }}>T20</button>
-      <button onClick={() => { playSound('click'); onStartGame(GameMode.FiftyFifty, 'human-vs-ai'); }}>50-50</button>
-      <button onClick={() => { playSound('click'); onStartGame(GameMode.Test, 'human-vs-ai'); }}>Test Match</button>
+  );
+
+  return (
+    <div className="screen home-screen">
+      <h2>Pass and Play (Local)</h2>
+      <div className="mode-selection">
+        <button className={selectedPlayerCount === 2 ? 'active' : ''} onClick={() => handleTypeSelect('pass-n-play', 2)}>2 Players</button>
+        <button className={selectedPlayerCount === 3 ? 'active' : ''} onClick={() => handleTypeSelect('pass-n-play', 3)}>3 Players</button>
+        <button className={selectedPlayerCount === 4 ? 'active' : ''} onClick={() => handleTypeSelect('pass-n-play', 4)}>4 Players</button>
+      </div>
+      {selectedGameType === 'pass-n-play' && <ModeButtons />}
+
+      <h2>Single Player (vs AI)</h2>
+      <div className="mode-selection">
+          {/* We'll make this a toggle button as well for consistency */}
+          <button className={selectedGameType === 'single' ? 'active' : ''} onClick={() => handleTypeSelect('single')}>Start Game</button>
+      </div>
+      {selectedGameType === 'single' && <ModeButtons />}
+      
+      <h2>Multiplayer (Online)</h2>
+      <div className="mode-selection">
+          <button onClick={() => { playSound('click'); onShowLobby(); }}>Lobby</button>
+      </div>
+      
+      <div className="home-buttons">
+          <button className="secondary" onClick={() => { playSound('click'); onShowSettings(); }}>Settings</button>
+      </div>
     </div>
-    {/* You can add a multiplayer section here later */}
-    <div className="home-buttons">
-        <button className="secondary" onClick={() => { playSound('click'); onShowSettings(); }}>Settings</button>
-    </div>
-  </div>
-);
+  );
+};
 
 //================================================================================
 // SETTINGS SCREEN
@@ -557,7 +650,7 @@ export const ControlHub = ({ isGameOver, waitingForTokenChoice, diceResult, onRo
                 </div>
             )}
             
-            {/* Condition 1.5: AI's turn (show nothing or a "thinking" state) */}
+            {/* Condition 1.5: AI's turn (show "thinking" state) */}
             {!diceResult && !isDiceRolling && currentPlayer.isAI && (
                 <div className="ai-thinking">AI</div>
             )}
